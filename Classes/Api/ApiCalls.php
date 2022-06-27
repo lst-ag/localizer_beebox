@@ -336,17 +336,17 @@ class ApiCalls extends \Localizationteam\Localizer\Api\ApiCalls
     /**
      * Retrieves work progress of the Beebox for the specified files, if no file specified it will retrieve every file
      *
-     * @param array $files An array containing a list of file-names. Can be empty if you do no want to filter (empty by default)
-     * @param int $skip Optional number, default is 0. Used for pagination. The files to skip.
-     * @param int $count Optional number, default is 100. Used for pagination and indicates the total number of files
+     * @param mixed $files Can be an array containing a list of file-names or false if you do no want to filter
+     * (false by default)
+     * @param string $targetLocale Target locale i. e. de-DE
+     * @param int|null $skip Optional number, default is 0. Used for pagination. The files to skip.
+     * @param int|null $count Optional number, default is 100. Used for pagination and indicates the total number of files
      *                   to return from this call. Make sure to specify a limit corresponding to your page
      *                   size (e.g. 100).
-     *
      * @return array corresponding to the json returned by the Beebox API
-     * @throws \Exception This Exception contains details of an eventual error
+     * @throws Exception This Exception contains details of an eventual error
      */
-    public function getWorkProgress(array $files = [], int $skip = 0, int $count = 100): array
-    {
+    public function getWorkProgress($files = false, string $targetLocale = '', int $skip = null, int $count = null): array {
         if ($this->isDisconnected()) {
             $this->connect();
         }
@@ -356,25 +356,32 @@ class ApiCalls extends \Localizationteam\Localizer\Api\ApiCalls
             'filter' => [],
         ];
 
-        $query['filter']['filePaths'] = [];
-        foreach ($files as $file) {
-            if ($file !== '') {
-                $query['filter']['filePaths'][] = [
-                    'Item1' => '',
-                    'Item2' => $file,
-                ];
+        if ($targetLocale !== '') {
+            $query['filter']['targetLocale'] = $targetLocale;
+        }
+        if (is_array($files)) {
+            $query['filter']['filePaths'] = [];
+            foreach ($files as $file) {
+                if ($file !== '') {
+                    $query['filter']['filePaths'][] = [
+                        'Item1' => '',
+                        'Item2' => $file,
+                    ];
+                }
+            }
+            if (empty($query['filter']['filePaths'])) {
+                unset($query['filter']['filePaths']);
             }
         }
-        if (empty($query['filter']['filePaths'])) {
-            unset($query['filter']['filePaths']);
+        if ($skip !== null) {
+            if ($skip > 0) {
+                $query['skip'] = $skip;
+            }
         }
-
-        if ($skip > 0) {
-            $query['skip'] = $skip;
-        }
-
-        if ($count > 0) {
-            $query['count'] = $count;
+        if ($count !== null) {
+            if ($count > 0) {
+                $query['count'] = $count;
+            }
         }
 
         $url = $this->url . '/api/workprogress/translatedfiles';
